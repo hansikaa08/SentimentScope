@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sentiment Scope - Product Analysis</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-content">
+      <div class="logo">
+        <div class="logo-icon">S</div>
+        <span>Sentiment Scope</span>
+      </div>
+      <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="index.html#how-it-works">How It Works</a>
+        <a href="#">Contact</a>
+        <button id="logoutBtn" class="btn-secondary">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container" style="padding: 3rem 0; min-height: 80vh;">
+    <div class="form-container" style="max-width: 500px; margin: 0 auto;">
+      <div class="text-center mb-8">
+        <h1 class="text-2xl font-bold text-gray-800">Product Analysis</h1>
+        <p class="text-gray-500 mt-1">Enter a product name to analyze reviews</p>
+      </div>
+
+      <form id="analysisForm">
+        <div class="form-group">
+          <label class="form-label">Product Name</label>
+          <input type="text" id="productName" class="form-input" placeholder="e.g. iPhone 16, Samsung Galaxy S24" required>
+        </div>
+
+        <button type="submit" class="btn-primary w-full" id="analyzeBtn">
+          Start Analysis
+        </button>
+      </form>
+
+      <div id="loading" class="hidden text-center mt-6">
+        <div style="color: #ec4899; font-weight: 600;">Analyzing product reviews... This may take a few minutes.</div>
+        <div style="margin-top: 1rem; color: #6b7280;">Collecting data from Reddit and processing sentiment...</div>
+      </div>
+
+      <div id="message" class="mt-4 text-center"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { AuthService } from './js/auth.js';
+    import { AnalysisService } from './js/analysis.js';
+
+    if (!AuthService.requireAuth()) {
+    }
+
+    const user = AuthService.getCurrentUser();
+    if (user) {
+      const navLinks = document.querySelector('.nav-links');
+      navLinks.innerHTML = `
+        <a href="index.html">Home</a>
+        <a href="index.html#how-it-works">How It Works</a>
+        <a href="#">Contact</a>
+        <span>Welcome, ${user.name}</span>
+        <button id="logoutBtn" class="btn-secondary">Logout</button>
+      `;
+    }
+
+    document.addEventListener('click', (e) => {
+      if (e.target.id === 'logoutBtn') {
+        AuthService.logout();
+      }
+    });
+
+    const analysisForm = document.getElementById('analysisForm');
+    const loadingDiv = document.getElementById('loading');
+    const messageDiv = document.getElementById('message');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+
+    analysisForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const productName = document.getElementById('productName').value.trim();
+
+      if (!productName) {
+        messageDiv.textContent = 'Please enter a product name';
+        messageDiv.className = 'text-center text-red-500';
+        return;
+      }
+
+      try {
+        analyzeBtn.disabled = true;
+        loadingDiv.classList.remove('hidden');
+        messageDiv.textContent = '';
+        
+        const result = await AnalysisService.analyzeProduct(productName);
+        
+        localStorage.setItem('analysisResult', JSON.stringify(result));
+        window.location.href = `results.html?product=${encodeURIComponent(productName)}`;
+        
+      } catch (error) {
+        messageDiv.textContent = error.message;
+        messageDiv.className = 'text-center text-red-500';
+      } finally {
+        analyzeBtn.disabled = false;
+        loadingDiv.classList.add('hidden');
+      }
+    });
+  </script>
+</body>
+</html>

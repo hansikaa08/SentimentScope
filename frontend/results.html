@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Analysis Results - Sentiment Scope</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.plot.ly/plotly-2.24.1.min.js" charset="utf-8"></script>
+  <style>
+    .metric-card {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      text-align: center;
+    }
+    
+    .metric-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #ec4899;
+      margin-bottom: 0.5rem;
+    }
+    
+    .metric-label {
+      color: #6b7280;
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .aspect-card {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      margin-bottom: 1rem;
+    }
+    
+    .sentiment-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    
+    .sentiment-positive {
+      background: #dcfce7;
+      color: #166534;
+    }
+    
+    .sentiment-negative {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    
+    .sentiment-neutral {
+      background: #f3f4f6;
+      color: #374151;
+    }
+    
+    .chart-container {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      margin-bottom: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-content">
+      <div class="logo">
+        <div class="logo-icon">S</div>
+        <span>Sentiment Scope</span>
+      </div>
+      <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="analysis.html">New Analysis</a>
+        <button id="logoutBtn" class="btn-secondary">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container" style="padding: 2rem 0;">
+    <div class="text-center mb-8">
+      <h1 id="productTitle" class="text-3xl font-bold text-gray-800 mb-2">Analysis Results</h1>
+      <p id="analysisSummary" class="text-gray-600">Sentiment analysis insights</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div class="metric-card">
+        <div id="totalReviews" class="metric-value">0</div>
+        <div class="metric-label">Total Reviews</div>
+      </div>
+      <div class="metric-card">
+        <div id="totalAspects" class="metric-value">0</div>
+        <div class="metric-label">Aspects Found</div>
+      </div>
+      <div class="metric-card">
+        <div id="overallSentiment" class="metric-value">-</div>
+        <div class="metric-label">Overall Sentiment</div>
+      </div>
+      <div class="metric-card">
+        <div id="analysisDate" class="metric-value">-</div>
+        <div class="metric-label">Analyzed On</div>
+      </div>
+    </div>
+
+    <div class="chart-container">
+      <h3 class="text-xl font-semibold mb-4">Aspect Sentiment Distribution</h3>
+      <div id="sentimentChart"></div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <div class="chart-container">
+        <h3 class="text-xl font-semibold mb-4">🏆 Most Praised Aspects</h3>
+        <div id="praisedAspects"></div>
+      </div>
+      <div class="chart-container">
+        <h3 class="text-xl font-semibold mb-4">⚠️ Most Criticized Aspects</h3>
+        <div id="criticizedAspects"></div>
+      </div>
+    </div>
+
+    <div class="chart-container">
+      <h3 class="text-xl font-semibold mb-4">📈 Detailed Aspect Analysis</h3>
+      <div id="aspectDetails"></div>
+    </div>
+
+    <div class="chart-container">
+      <h3 class="text-xl font-semibold mb-4">💬 Sample Reviews</h3>
+      <div id="sampleReviews"></div>
+    </div>
+
+    <div class="text-center mt-8">
+      <button onclick="window.location.href='analysis.html'" class="btn-primary mr-4">
+        Analyze Another Product
+      </button>
+      <button onclick="exportResults()" class="btn-secondary">
+        Export Report
+      </button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { AuthService } from './js/auth.js';
+
+    if (!AuthService.requireAuth()) {
+    }
+
+    const user = AuthService.getCurrentUser();
+    if (user) {
+      const navLinks = document.querySelector('.nav-links');
+      navLinks.innerHTML = `
+        <a href="index.html">Home</a>
+        <a href="analysis.html">New Analysis</a>
+        <span>Welcome, ${user.name}</span>
+        <button id="logoutBtn" class="btn-secondary">Logout</button>
+      `;
+    }
+
+    document.addEventListener('click', (e) => {
+      if (e.target.id === 'logoutBtn') {
+        AuthService.logout();
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const analysisResult = JSON.parse(localStorage.getItem('analysisResult'));
+      const urlParams = new URLSearchParams(window.location.search);
+      const productName = urlParams.get('product');
+
+      if (!analysisResult) {
+        document.body.innerHTML = `
+          <div class="min-h-screen flex items-center justify-center">
+            <div class="text-center">
+              <h1 class="text-2xl font-bold text-gray-800 mb-4">No Analysis Results Found</h1>
+              <p class="text-gray-600 mb-6">Please analyze a product first.</p>
+              <a href="analysis.html" class="btn-primary">Start Analysis</a>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      displayResults(analysisResult, productName);
+    });
+
+    function displayResults(result, productName) {
+      document.getElementById('productTitle').textContent = `Analysis: ${productName || result.product_name}`;
+      
+      document.getElementById('totalReviews').textContent = result.total_reviews?.toLocaleString() || '0';
+      document.getElementById('totalAspects').textContent = result.aspects_found?.length || '0';
+      document.getElementById('overallSentiment').textContent = result.summary?.overall_sentiment || 'Unknown';
+      document.getElementById('analysisDate').textContent = new Date().toLocaleDateString();
+
+      if (result.summary) {
+        document.getElementById('analysisSummary').textContent = 
+          `Customers are generally ${result.summary.overall_sentiment?.toLowerCase()} about ${productName || result.product_name}`;
+      }
+
+      createSentimentChart(result);
+      displayPraisedAspects(result);
+      displayCriticizedAspects(result);
+      displayAspectDetails(result);
+      displaySampleReviews(result);
+    }
+
+    function createSentimentChart(result) {
+      if (!result.sentiment_analysis) return;
+
+      const aspects = Object.keys(result.sentiment_analysis);
+      const positiveCounts = [];
+      const negativeCounts = [];
+      const neutralCounts = [];
+
+      aspects.forEach(aspect => {
+        const data = result.sentiment_analysis[aspect];
+        const dist = data.sentiment_distribution || {};
+        
+        positiveCounts.push(dist.positive || dist.LABEL_1 || 0);
+        negativeCounts.push(dist.negative || dist.LABEL_0 || 0);
+        neutralCounts.push(dist.neutral || dist.LABEL_2 || 0);
+      });
+
+      const chartData = [
+        {
+          x: aspects,
+          y: positiveCounts,
+          name: 'Positive',
+          type: 'bar',
+          marker: { color: '#10b981' }
+        },
+        {
+          x: aspects,
+          y: negativeCounts,
+          name: 'Negative',
+          type: 'bar',
+          marker: { color: '#ef4444' }
+        },
+        {
+          x: aspects,
+          y: neutralCounts,
+          name: 'Neutral',
+          type: 'bar',
+          marker: { color: '#6b7280' }
+        }
+      ];
+
+      const layout = {
+        barmode: 'stack',
+        title: 'Sentiment Distribution by Aspect',
+        xaxis: { title: 'Aspects' },
+        yaxis: { title: 'Percentage' },
+        showlegend: true
+      };
+
+      Plotly.newPlot('sentimentChart', chartData, layout, { responsive: true });
+    }
+
+    function displayPraisedAspects(result) {
+      const container = document.getElementById('praisedAspects');
+      const praised = result.summary?.most_praised || [];
+
+      if (praised.length === 0) {
+        container.innerHTML = '<p class="text-gray-500">No praised aspects found.</p>';
+        return;
+      }
+
+      container.innerHTML = praised.map((aspect, index) => {
+        const data = result.sentiment_analysis[aspect];
+        const confidence = data ? (data.average_confidence * 100).toFixed(1) : '0';
+        return `
+          <div class="flex justify-between items-center py-2 border-b">
+            <div>
+              <span class="font-semibold">${index + 1}. ${aspect}</span>
+              <div class="text-sm text-gray-500">${confidence}% confidence</div>
+            </div>
+            <span class="sentiment-badge sentiment-positive">Positive</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function displayCriticizedAspects(result) {
+      const container = document.getElementById('criticizedAspects');
+      const criticized = result.summary?.most_criticized || [];
+
+      if (criticized.length === 0) {
+        container.innerHTML = '<p class="text-gray-500">No criticized aspects found.</p>';
+        return;
+      }
+
+      container.innerHTML = criticized.map((aspect, index) => {
+        const data = result.sentiment_analysis[aspect];
+        const confidence = data ? (data.average_confidence * 100).toFixed(1) : '0';
+        return `
+          <div class="flex justify-between items-center py-2 border-b">
+            <div>
+              <span class="font-semibold">${index + 1}. ${aspect}</span>
+              <div class="text-sm text-gray-500">${confidence}% confidence</div>
+            </div>
+            <span class="sentiment-badge sentiment-negative">Negative</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function displayAspectDetails(result) {
+      const container = document.getElementById('aspectDetails');
+      
+      if (!result.sentiment_analysis) {
+        container.innerHTML = '<p class="text-gray-500">No aspect data available.</p>';
+        return;
+      }
+
+      const aspects = Object.entries(result.sentiment_analysis);
+
+      container.innerHTML = aspects.map(([aspect, data]) => {
+        const sentiment = data.dominant_sentiment?.toLowerCase();
+        const confidence = (data.average_confidence * 100).toFixed(1);
+        const mentions = data.total_mentions;
+        
+        let sentimentClass = 'sentiment-neutral';
+        if (sentiment.includes('positive') || sentiment === 'label_1') sentimentClass = 'sentiment-positive';
+        if (sentiment.includes('negative') || sentiment === 'label_0') sentimentClass = 'sentiment-negative';
+
+        return `
+          <div class="aspect-card">
+            <div class="flex justify-between items-start mb-3">
+              <h4 class="text-lg font-semibold capitalize">${aspect}</h4>
+              <div class="flex gap-2 items-center">
+                <span class="sentiment-badge ${sentimentClass}">${sentiment}</span>
+                <span class="text-sm text-gray-500">${confidence}% conf</span>
+              </div>
+            </div>
+            <div class="grid grid-cols-3 gap-4 text-sm mb-3">
+              <div class="text-center">
+                <div class="font-semibold">${mentions}</div>
+                <div class="text-gray-500">Mentions</div>
+              </div>
+              <div class="text-center">
+                <div class="font-semibold">${confidence}%</div>
+                <div class="text-gray-500">Confidence</div>
+              </div>
+              <div class="text-center">
+                <div class="font-semibold capitalize">${sentiment}</div>
+                <div class="text-gray-500">Sentiment</div>
+              </div>
+            </div>
+            ${data.sample_sentences ? `
+              <div class="mt-3">
+                <div class="text-sm font-semibold mb-2">Sample Comments:</div>
+                ${data.sample_sentences.slice(0, 2).map(sentence => 
+                  `<div class="text-sm text-gray-600 mb-1 p-2 bg-gray-50 rounded">"${sentence}"</div>`
+                ).join('')}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function displaySampleReviews(result) {
+      const container = document.getElementById('sampleReviews');
+      
+      const allSentences = [];
+      if (result.sentiment_analysis) {
+        Object.values(result.sentiment_analysis).forEach(data => {
+          if (data.sample_sentences) {
+            allSentences.push(...data.sample_sentences);
+          }
+        });
+      }
+
+      const uniqueSentences = [...new Set(allSentences)].slice(0, 5);
+
+      if (uniqueSentences.length === 0) {
+        container.innerHTML = '<p class="text-gray-500">No sample reviews available.</p>';
+        return;
+      }
+
+      container.innerHTML = uniqueSentences.map(sentence => 
+        `<div class="bg-gray-50 p-4 rounded-lg mb-3">
+          <div class="text-gray-700">"${sentence}"</div>
+        </div>`
+      ).join('');
+    }
+
+    function exportResults() {
+      const result = JSON.parse(localStorage.getItem('analysisResult'));
+      const productName = new URLSearchParams(window.location.search).get('product');
+      
+      if (!result) {
+        alert('No results to export');
+        return;
+      }
+
+      let report = `Sentiment Scope Analysis Report\n`;
+      report += `Product: ${productName || result.product_name}\n`;
+      report += `Date: ${new Date().toLocaleDateString()}\n`;
+      report += `Total Reviews: ${result.total_reviews}\n`;
+      report += `Overall Sentiment: ${result.summary?.overall_sentiment || 'Unknown'}\n\n`;
+      
+      report += `KEY FINDINGS:\n`;
+      report += `Most Praised: ${result.summary?.most_praised?.join(', ') || 'None'}\n`;
+      report += `Most Criticized: ${result.summary?.most_criticized?.join(', ') || 'None'}\n\n`;
+      
+      report += `DETAILED ANALYSIS:\n`;
+      if (result.sentiment_analysis) {
+        Object.entries(result.sentiment_analysis).forEach(([aspect, data]) => {
+          report += `• ${aspect}: ${data.dominant_sentiment} (${(data.average_confidence * 100).toFixed(1)}% confidence)\n`;
+        });
+      }
+
+      const blob = new Blob([report], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sentiment-analysis-${productName || 'report'}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>

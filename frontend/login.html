@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login – Sentiment Scope</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="min-h-screen flex items-center justify-center" style="background: linear-gradient(to bottom, #fdf2f8, white);">
+  <div class="form-container">
+    <div class="text-center mb-8">
+      <div class="logo-icon" style="margin: 0 auto 1rem; width: 3rem; height: 3rem; font-size: 1.25rem;">S</div>
+      <h1 class="text-2xl font-bold text-gray-800">Welcome Back</h1>
+      <p class="text-gray-500 mt-1">Log in to continue</p>
+    </div>
+
+    <form id="loginForm">
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" id="email" class="form-input" placeholder="you@example.com" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" id="password" class="form-input" placeholder="Enter your password" required>
+      </div>
+
+      <button type="submit" class="btn-primary w-full">
+        Log In
+      </button>
+    </form>
+
+    <p class="text-center text-gray-600 text-sm mt-6">
+      Don't have an account?
+      <a href="signup.html" class="text-pink-500 hover:underline font-semibold">Sign Up</a>
+    </p>
+
+    <div id="message" class="mt-4 text-center"></div>
+  </div>
+
+  <script type="module">
+    import { AuthService } from './js/auth.js';
+
+    const loginForm = document.getElementById('loginForm');
+    const messageDiv = document.getElementById('message');
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value.trim();
+
+      try {
+        messageDiv.textContent = 'Logging in...';
+        messageDiv.className = 'text-center text-blue-500';
+        
+        const result = await AuthService.login({ email, password });
+        
+        if (result.token) {
+          messageDiv.textContent = 'Login successful! Redirecting...';
+          messageDiv.className = 'text-center text-green-500';
+          setTimeout(() => {
+            window.location.href = 'analysis.html';
+          }, 1000);
+        }
+      } catch (error) {
+        messageDiv.textContent = error.message;
+        messageDiv.className = 'text-center text-red-500';
+      }
+    });
+
+    if (AuthService.isLoggedIn()) {
+      window.location.href = 'analysis.html';
+    }
+  </script>
+</body>
+</html>

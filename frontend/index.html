@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sentiment Scope – AI Review Analyzer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-content">
+      <div class="logo">
+        <div class="logo-icon">S</div>
+        <span>Sentiment Scope</span>
+      </div>
+      <div class="nav-links">
+        <a href="#">Home</a>
+        <a href="#how-it-works">How It Works</a>
+        <a href="#">Contact</a>
+        <a href="login.html" class="btn-secondary">Login</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="container" style="padding: 5rem 0; text-align: center;">
+    <h1 style="font-size: 3rem; font-weight: 700; margin-bottom: 1.5rem; color: #1f2937;">
+      AI tool that analyzes customer reviews and finds brand strengths & weaknesses.
+    </h1>
+    <p style="font-size: 1.25rem; color: #6b7280; margin-bottom: 2.5rem;">
+      Understand customer opinions with smart, automated insights.
+    </p>
+    <a href="analysis.html" class="btn-primary">
+      START ANALYSIS
+    </a>
+  </section>
+
+  <section id="how-it-works" style="background: #f9fafb; padding: 5rem 0;">
+    <div class="container">
+      <h2 style="text-align: center; font-size: 2.25rem; font-weight: 600; margin-bottom: 3rem; color: #1f2937;">
+        HOW IT WORKS
+      </h2>
+      
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+        <div class="card text-center">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">📥</div>
+          <h3 style="font-weight: 600; margin-bottom: 0.5rem;">Input Reviews</h3>
+          <p style="color: #6b7280;">Upload or paste product reviews</p>
+        </div>
+
+        <div class="card text-center">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">🧹</div>
+          <h3 style="font-weight: 600; margin-bottom: 0.5rem;">Clean Text</h3>
+          <p style="color: #6b7280;">Removes unnecessary characters</p>
+        </div>
+
+        <div class="card text-center">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">🔍</div>
+          <h3 style="font-weight: 600; margin-bottom: 0.5rem;">Detect Aspects</h3>
+          <p style="color: #6b7280;">Finds product features (camera, battery, etc.)</p>
+        </div>
+
+        <div class="card text-center">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">📊</div>
+          <h3 style="font-weight: 600; margin-bottom: 0.5rem;">View Insights</h3>
+          <p style="color: #6b7280;">Displays charts, summaries, and key findings</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer style="text-align: center; padding: 2rem; color: #6b7280; border-top: 1px solid #e5e7eb;">
+    © 2025 Sentiment Scope. All rights reserved.
+  </footer>
+
+  <script type="module">
+    import { AuthService } from './js/auth.js';
+    
+    if (AuthService.isLoggedIn()) {
+      const user = AuthService.getCurrentUser();
+      const navLinks = document.querySelector('.nav-links');
+      navLinks.innerHTML = `
+        <a href="#">Home</a>
+        <a href="#how-it-works">How It Works</a>
+        <a href="#">Contact</a>
+        <span>Welcome, ${user.name}</span>
+        <button onclick="AuthService.logout()" class="btn-secondary">Logout</button>
+      `;
+    }
+  </script>
+</body>
+</html>
